@@ -1,2 +1,2 @@
 # gym-nim
-An Open AI Gym environment for the game Nimbuses
+An Open AI Gym environment for the game Nim
