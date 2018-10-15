@@ -75,11 +75,13 @@ class NimEnv(gym.Env):
 
     def reset(self):
         self.state = self.heaps
-        print('starting in state:', self.state)
+        print('Reset to state initial state.')
+        self.render()
         return self.state
 
     def render(self, mode='human'):
-        print("current state:", self.state)
+        for index in range(len(self.state)):
+            print("Heap ", index, ": ", self.state[index])
         return None
 
     def generateActionSpace(self):
