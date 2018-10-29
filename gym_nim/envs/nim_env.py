@@ -2,6 +2,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+import copy
 
 
 class NimEnv(gym.Env):
@@ -11,10 +12,13 @@ class NimEnv(gym.Env):
         self.numberOfHeaps = 4
         self.maxHeapSize = 50
         self.heaps = None
+        self.resetState = None
         self.state = None
-        self.generateActionSpace()
+        self.actionSize = 0
+        self.outputToActionMap = []
         self.setHeapsStartingPositions()
-        print("Initialised")
+        self.generateActionSpace()
+        self.generateOutputToActionMap()
         return
 
     def setMaxHeapSize(self, size=30):
@@ -31,7 +35,7 @@ class NimEnv(gym.Env):
 
     def setHeapsStartingPositions(self, heaps=None):
         if heaps:
-            self.heaps = np.array(heaps)
+            self.heaps = np.array(heaps, dtype=np.int32)
             currentMax = np.max(self.heaps)
             if self.maxHeapSize < currentMax:
                 self.setMaxHeapSize(currentMax)
@@ -39,12 +43,20 @@ class NimEnv(gym.Env):
         # the starting position are random-sized heaps of beans
         else:
             self.heaps = np.random.randint(low=1, high=self.maxHeapSize + 1, size=(self.numberOfHeaps,))
-
+        self.resetState = copy.deepcopy(self.heaps)
+        self.generateActionSpace()
         self.reset()
         return None
 
+    def getActionSize(self):
+        sum = 0
+        for heap in self.heaps:
+            sum += heap
+        self.actionSize = sum
+        return sum
+
     def step(self, action):
-        reward = 0
+        reward = -1
         done = False
 
         # Action should be a list of size 2
@@ -67,16 +79,15 @@ class NimEnv(gym.Env):
 
         # Game is over if all heaps are empty
         if np.all(np.array(self.state) == 0):
-            reward = 1  # this is for the normal variant. The misère variant the reward = - 1.
+            reward = 50  # this is for the normal variant.
             done = True
 
-        print("Stepped")
         return self.state, reward, done, {}
 
     def reset(self):
-        self.state = self.heaps
-        print('Reset to state initial state.')
-        self.render()
+        self.state = copy.deepcopy(self.resetState)
+        # print('Reset to state initial state.')
+        # self.render()
         return self.state
 
     def render(self, mode='human'):
@@ -88,4 +99,34 @@ class NimEnv(gym.Env):
         # Action space is two numbers
         # First is heap number, Second is number to remove
         self.action_space = spaces.Box(np.array([0, 1]), np.array([self.numberOfHeaps, self.maxHeapSize]))
-        return None
+        self.getActionSize()
+        self.generateOutputToActionMap()
+        return self.action_space
+
+    def generateOutputToActionMap(self):
+        map = []
+        for heap in range(len(self.heaps)):
+            for bean in range(1, self.heaps[heap]+1):
+                map.append([heap, bean])
+        self.outputToActionMap = map
+        pass
+
+    def lookupAction(self, output):
+        assert output <= len(self.outputToActionMap), 'Outside of range of possible actions.' + \
+                                 'Output is:{}. Should be in range 0-{}'.format(output, len(self.outputToActionMap))
+        return self.outputToActionMap[output]
+
+    def getPossibleMoves(self):
+        pmoves = []
+        for heap in range(len(self.state)):
+            for bean in range(1, self.state[heap]+1):
+                pmoves.append([heap, bean])
+        return pmoves
+
+    def getPossibleMoveIndices(self):
+        pmoves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if item in self.getPossibleMoves()]
+        return pmoves
+
+    def getIllegalMoveIndices(self):
+        impmoves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if item not in self.getPossibleMoves()]
+        return impmoves
