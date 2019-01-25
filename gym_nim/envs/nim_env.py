@@ -1,3 +1,4 @@
+import functools
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -56,7 +57,7 @@ class NimEnv(gym.Env):
         return sum
 
     def step(self, action):
-        reward = -1
+        reward = 0
         done = False
 
         # Action should be a list of size 2
@@ -79,7 +80,7 @@ class NimEnv(gym.Env):
 
         # Game is over if all heaps are empty
         if np.all(np.array(self.state) == 0):
-            reward = 50  # this is for the normal variant.
+            reward = 1  # this is for the normal variant.
             done = True
 
         return self.state, reward, done, {}
@@ -104,11 +105,11 @@ class NimEnv(gym.Env):
         return self.action_space
 
     def generateOutputToActionMap(self):
-        map = []
+        action_map = []
         for heap in range(len(self.heaps)):
             for bean in range(1, self.heaps[heap]+1):
-                map.append([heap, bean])
-        self.outputToActionMap = map
+                action_map.append([heap, bean])
+        self.outputToActionMap = action_map
         pass
 
     def lookupAction(self, output):
@@ -130,3 +131,20 @@ class NimEnv(gym.Env):
     def getIllegalMoveIndices(self):
         impmoves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if item not in self.getPossibleMoves()]
         return impmoves
+
+    def getOptimalMoves(self):
+        optimal_moves = []
+
+        # first choose heap with non-zero size
+        state = self.env.state.copy()
+        # print(state)
+        nim_sum = functools.reduce(lambda x, y: x ^ y, state)
+
+        # Calc which move to make
+        for index, heap in enumerate(state):
+            target_size = heap ^ nim_sum
+            if target_size < heap:
+                beans_number = heap - target_size
+                optimal_moves.append((index, beans_number))
+
+        return optimal_moves
