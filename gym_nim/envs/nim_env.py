@@ -13,9 +13,10 @@ class NimEnv(gym.Env):
         self.numberOfHeaps = 4
         self.maxHeapSize = 50
         self.heaps = None
+        self.state_size = self.numberOfHeaps
         self.resetState = None
         self.state = None
-        self.actionSize = 0
+        self.action_size = 0
         self.outputToActionMap = []
         self.setHeapsStartingPositions()
         self.generateActionSpace()
@@ -30,6 +31,7 @@ class NimEnv(gym.Env):
 
     def setNumberOfHeaps(self, number=4):
         self.numberOfHeaps = number
+        self.state_size = self.numberOfHeaps
         # regenerate action space
         self.generateActionSpace()
         return None
@@ -53,7 +55,7 @@ class NimEnv(gym.Env):
         sum = 0
         for heap in self.heaps:
             sum += heap
-        self.actionSize = sum
+        self.action_size = sum
         return sum
 
     def step(self, action):
@@ -117,6 +119,9 @@ class NimEnv(gym.Env):
                                  'Output is:{}. Should be in range 0-{}'.format(output, len(self.outputToActionMap))
         return self.outputToActionMap[output]
 
+    def getMoveList(self):
+        return self.outputToActionMap
+
     def getPossibleMoves(self):
         pmoves = []
         for heap in range(len(self.state)):
@@ -136,7 +141,7 @@ class NimEnv(gym.Env):
         optimal_moves = []
 
         # first choose heap with non-zero size
-        state = self.env.state.copy()
+        state = self.state.copy()
         # print(state)
         nim_sum = functools.reduce(lambda x, y: x ^ y, state)
 
@@ -145,6 +150,6 @@ class NimEnv(gym.Env):
             target_size = heap ^ nim_sum
             if target_size < heap:
                 beans_number = heap - target_size
-                optimal_moves.append((index, beans_number))
+                optimal_moves.append([index, beans_number])
 
         return optimal_moves
