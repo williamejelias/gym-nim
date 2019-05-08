@@ -1,9 +1,8 @@
+import copy
 import functools
 import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
 import numpy as np
-import copy
+from gym import spaces
 
 
 class NimEnv(gym.Env):
@@ -18,45 +17,51 @@ class NimEnv(gym.Env):
         self.state = None
         self.action_size = 0
         self.outputToActionMap = []
-        self.setHeapsStartingPositions()
-        self.generateActionSpace()
-        self.generateOutputToActionMap()
+        self.set_heaps_starting_positions()
+        self.generate_action_space()
+        self.generate_output_to_action_map()
+
+        # Reward scheme
+        self.win_reward = 1
+        self.loss_reward = -1
+        self.transition_reward = 0
+        self.invalid_move_reward = -10
         return
 
-    def setMaxHeapSize(self, size=30):
+    def set_max_heap_size(self, size=30):
         self.maxHeapSize = size
-        self.generateActionSpace()
+        self.generate_action_space()
         # regenerate action space
         return None
 
-    def setNumberOfHeaps(self, number=4):
+    def set_number_of_heaps(self, number=4):
         self.numberOfHeaps = number
         self.state_size = self.numberOfHeaps
         # regenerate action space
-        self.generateActionSpace()
+        self.generate_action_space()
         return None
 
-    def setHeapsStartingPositions(self, heaps=None):
+    def set_heaps_starting_positions(self, heaps=None):
         if heaps:
             self.heaps = np.array(heaps, dtype=np.int32)
-            currentMax = np.max(self.heaps)
-            if self.maxHeapSize < currentMax:
-                self.setMaxHeapSize(currentMax)
+            current_max = np.max(self.heaps)
+            if self.maxHeapSize < current_max:
+                self.set_max_heap_size(current_max)
 
         # the starting position are random-sized heaps of beans
         else:
             self.heaps = np.random.randint(low=1, high=self.maxHeapSize + 1, size=(self.numberOfHeaps,))
         self.resetState = copy.deepcopy(self.heaps)
-        self.generateActionSpace()
+        self.generate_action_space()
         self.reset()
         return None
 
-    def getActionSize(self):
-        sum = 0
+    def get_action_size(self):
+        action_sum = 0
         for heap in self.heaps:
-            sum += heap
-        self.action_size = sum
-        return sum
+            action_sum += heap
+        self.action_size = action_sum
+        return action_sum
 
     def step(self, action):
         reward = 0
@@ -69,16 +74,16 @@ class NimEnv(gym.Env):
         assert len(action) == 2, 'Wrong length.' + \
                                  'Length is:{}. Should by 2'.format(len(action))
 
-        heapNumber = action[0]
-        numberOfBeans = action[1]
-        heapSize = self.state[heapNumber]
+        heap_number = action[0]
+        number_of_beans = action[1]
+        heap_size = self.state[heap_number]
 
-        assert heapSize >= numberOfBeans, 'Heap is not big enough' + \
-                                          "Heap number is: {}. You tried to take {}, but there are only {} beans in " \
-                                          "this heap. These are the heaps: {}".format(
-                                              heapNumber, numberOfBeans, heapSize, self.state)
+        assert heap_size >= number_of_beans, 'Heap is not big enough' + \
+                                             "Heap number is: {}. You tried to take {}, but there are only {} beans " \
+                                             "in this heap. These are the heaps: {}".format(
+                                                 heap_number, number_of_beans, heap_size, self.state)
 
-        self.state[heapNumber] -= numberOfBeans
+        self.state[heap_number] -= number_of_beans
 
         # Game is over if all heaps are empty
         if np.all(np.array(self.state) == 0):
@@ -98,46 +103,49 @@ class NimEnv(gym.Env):
             print("Heap ", index, ": ", self.state[index])
         return None
 
-    def generateActionSpace(self):
+    def generate_action_space(self):
         # Action space is two numbers
         # First is heap number, Second is number to remove
         self.action_space = spaces.Box(np.array([0, 1]), np.array([self.numberOfHeaps, self.maxHeapSize]))
-        self.getActionSize()
-        self.generateOutputToActionMap()
+        self.get_action_size()
+        self.generate_output_to_action_map()
         return self.action_space
 
-    def generateOutputToActionMap(self):
+    def generate_output_to_action_map(self):
         action_map = []
         for heap in range(len(self.heaps)):
-            for bean in range(1, self.heaps[heap]+1):
+            for bean in range(1, self.heaps[heap] + 1):
                 action_map.append([heap, bean])
         self.outputToActionMap = action_map
         pass
 
-    def lookupAction(self, output):
+    def lookup_action(self, output):
         assert output <= len(self.outputToActionMap), 'Outside of range of possible actions.' + \
-                                 'Output is:{}. Should be in range 0-{}'.format(output, len(self.outputToActionMap))
+                                                      'Output is:{}. Should be in range 0-{}'.format(output, len(
+                                                          self.outputToActionMap))
         return self.outputToActionMap[output]
 
-    def getMoveList(self):
+    def get_move_list(self):
         return self.outputToActionMap
 
-    def getPossibleMoves(self):
-        pmoves = []
+    def get_possible_moves(self):
+        p_moves = []
         for heap in range(len(self.state)):
-            for bean in range(1, self.state[heap]+1):
-                pmoves.append([heap, bean])
-        return pmoves
+            for bean in range(1, self.state[heap] + 1):
+                p_moves.append([heap, bean])
+        return p_moves
 
-    def getPossibleMoveIndices(self):
-        pmoves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if item in self.getPossibleMoves()]
-        return pmoves
+    def get_possible_move_indices(self):
+        p_moves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if
+                   item in self.get_possible_moves()]
+        return p_moves
 
-    def getIllegalMoveIndices(self):
-        impmoves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if item not in self.getPossibleMoves()]
-        return impmoves
+    def get_illegal_move_indices(self):
+        imp_moves = [self.outputToActionMap.index(item) for item in self.outputToActionMap if
+                     item not in self.get_possible_moves()]
+        return imp_moves
 
-    def getOptimalMoves(self):
+    def get_optimal_moves(self):
         optimal_moves = []
 
         # first choose heap with non-zero size
