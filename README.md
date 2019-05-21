@@ -1,5 +1,5 @@
 # gym-nim
-An Open AI Gym environment for the game Nim
+An OpenAI Gym environment for the game Nim
 
 ## Installation
 
@@ -7,3 +7,5 @@ An Open AI Gym environment for the game Nim
 cd gym-nim
 pip3 install -e .
 ```
+
+Refer to my other repository `Nim-RL-Agents' for a few examples of value-based Reinforcement Learning agents as well as a Trainer class and a MoveClassifier Supervised Learning example.
